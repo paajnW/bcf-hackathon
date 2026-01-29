@@ -1,14 +1,12 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors')
-const { Ollama } = require('ollama');
-const {createClient} = require('@supabase/supabase-js')
+import 'dotenv/config'
+import express from 'express'
+import cors from 'cors'
+import { Ollama } from 'ollama';
+import {supabase, uploadMaterial, searchMaterials, getAllMaterials } from './db/db.js'
 const app = express();
 app.use(express.json());
 
 const PORT = process.env.PORT|| 8000;
-// ⚡ CONNECT TO SUPABASE
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 // Initialize Ollama
 // If using local: http://127.0.0.1:11434
 // If using cloud: https://api.ollama.com (verify the exact provider URL)
@@ -77,6 +75,8 @@ app.get('/api/materials', async (req, res) => {
     if (error) return res.status(500).json({ error: error.message });
     res.json(data);
 });
+
+
 app.listen(PORT, () => {
   console.log(`✅ AI Test Server running on http://localhost:${PORT}`);
 });
