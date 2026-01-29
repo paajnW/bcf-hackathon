@@ -72,7 +72,11 @@ app.get('/api/search', async (req, res) => {
     if (error) return res.status(500).json({ error: error.message });
     res.status(200).json(data);
 });
-
+app.get('/api/materials', async (req, res) => {
+    const { data, error } = await getAllMaterials();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
+});
 app.listen(PORT, () => {
   console.log(`✅ AI Test Server running on http://localhost:${PORT}`);
 });
