@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const { Ollama } = require('ollama');
-
+const {dbClient} = require('supabase')
 const app = express();
 app.use(express.json());
 
