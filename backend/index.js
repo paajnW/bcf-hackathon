@@ -69,11 +69,47 @@ app.post('/api/admin/upload', async (req, res) => {
 });
 
 // GET: Student searches materials [cite: 20, 58]
-app.get('/api/search', async (req, res) => {
-    const { query } = req.query;
-    const { data, error } = await searchMaterials(query);
-    if (error) return res.status(500).json({ error: error.message });
-    res.status(200).json(data);
+app.post('/api/search', async (req, res) => {
+    const { userText } = req.body; // e.g., "Find me advanced tutorials on React hooks"
+
+    if (!userText) return res.status(400).json({ error: "No search text provided" });
+
+    try {
+        // 1. AI Refinement Step
+        const systemPrompt = `
+            You are a search query optimizer. 
+            Convert the user's natural language request into 1 or 2 essential search keywords.
+            Output ONLY the keywords, no punctuation, no intro, no "Here is your search".
+            Example Input: "I want to learn about how to use Postgres with Node"
+            Example Output: Postgres Node
+        `;
+
+        const aiResponse = await ollama.chat({
+            model: 'kimi-k2.5:cloud',
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userText }
+            ],
+            stream: false
+        });
+
+        const refinedQuery = aiResponse.message.content.trim();
+        console.log(`🔍 Original: "${userText}" -> AI Refined: "${refinedQuery}"`);
+
+        // 2. Database Search Step
+        const { data, error } = await searchMaterials(refinedQuery);
+
+        if (error) throw error;
+
+        res.status(200).json({
+            refinedQuery, // Good for debugging on the frontend
+            results: data
+        });
+
+    } catch (error) {
+        console.error("Search Error:", error);
+        res.status(500).json({ error: "Search failed", details: error.message });
+    }
 });
 app.get('/api/materials', async (req, res) => {
     const { data, error } = await getCourseContent();
