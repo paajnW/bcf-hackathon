@@ -59,6 +59,20 @@ app.post("/ai-check", async (req, res) => {
   }
 });
 
+app.post('/api/admin/upload', async (req, res) => {
+    const { data, error } = await uploadMaterial(req.body);
+    if (error) return res.status(500).json({ error: error.message });
+    res.status(200).json({ message: "Content Categorized Successfully", data });
+});
+
+// GET: Student searches materials [cite: 20, 58]
+app.get('/api/search', async (req, res) => {
+    const { query } = req.query;
+    const { data, error } = await searchMaterials(query);
+    if (error) return res.status(500).json({ error: error.message });
+    res.status(200).json(data);
+});
+
 app.listen(PORT, () => {
   console.log(`✅ AI Test Server running on http://localhost:${PORT}`);
 });
