@@ -15,19 +15,37 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
  * Part 1: CMS - Uploading Materials
  * Maps to your specific columns: week_number, tags, topic
  */
-export const uploadMaterial = async (materialData) => {
+// Add these to your existing db.js
+export const uploadFileToStorage = async (fileBuffer, fileName, contentType) => {
+    const filePath = `${Date.now()}_${fileName}`;
+    
+    const { data, error } = await supabase.storage
+        .from('course-materials') // Make sure this bucket exists in Supabase
+        .upload(filePath, fileBuffer, { contentType });
+
+    if (error) throw error;
+
+    // Get the public URL to save in the materials table
+    const { data: { publicUrl } } = supabase.storage
+        .from('course-materials')
+        .getPublicUrl(filePath);
+
+    return publicUrl;
+};
+
+// Update saveMaterialMetadata to include file_url
+export const saveMaterialMetadata = async (metadata, text, fileUrl) => {
     const { data, error } = await supabase
         .from('materials')
-        .insert([{
-            course_id: materialData.course_id,
-            title: materialData.title,
-            type: materialData.type,           // 'Theory' or 'Lab'
-            topic: materialData.topic,
-            week_number: materialData.week,
-            tags: materialData.tags,           // Expects an array: ["C++", "DSA"]
-            content_text: materialData.content_text
+        .insert([{ 
+            title: metadata.title, 
+            type: metadata.type, 
+            topic: metadata.topic, 
+            week_number: metadata.week,
+            content_text: text,
+            file_url: fileUrl // Add this column to your materials table!
         }])
-        .select();
+        .select().single();
     return { data, error };
 };
 
