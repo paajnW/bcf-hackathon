@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import {default as pdf} from 'pdf-parse'
 import express from 'express'
 import cors from 'cors'
 import { Ollama } from 'ollama';
@@ -11,7 +12,7 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
-
+const upload = multer();
 const PORT = process.env.PORT|| 8000;
 // Initialize Ollama
 // If using local: http://127.0.0.1:11434
