@@ -94,5 +94,4 @@ export const getCourseContent = async (courseCode) => {
         .select('content_text, type, topic')
         .eq('course_id', course.id);
 };
-import ollama from 'ollama';
 

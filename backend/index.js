@@ -2,7 +2,8 @@ import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import { Ollama } from 'ollama';
-import {supabase, uploadMaterial, searchMaterials, getCourseContent } from './db/db.js'
+import multer from 'multer';
+import {supabase, uploadFileToStorage, searchMaterial, getCourseContent } from './db/db.js'
 const app = express();
 app.use(express.json());
 app.use(cors({
@@ -62,10 +63,41 @@ app.post("/ai-check", async (req, res) => {
   }
 });
 
-app.post('/api/admin/upload', async (req, res) => {
-    const { data, error } = await uploadMaterial(req.body);
-    if (error) return res.status(500).json({ error: error.message });
-    res.status(200).json({ message: "Content Categorized Successfully", data });
+app.post('/api/admin/upload', upload.single('file'), async (req, res) => {
+    try {
+        const file = req.file;
+        if (!file) return res.status(400).json({ error: "No file uploaded" });
+
+        // 1. Upload file to Supabase Storage
+        const fileUrl = await uploadFileToStorage(file.buffer, file.originalname, file.mimetype);
+
+        // 2. Extract text for RAG
+        const pdfData = await pdf(file.buffer);
+        const text = pdfData.text;
+
+        // 3. Save Metadata and the Storage URL to DB
+        const { data: material, error } = await saveMaterialMetadata(req.body, text, fileUrl);
+        if (error) throw error;
+
+        // 4. Chunking & Embedding
+        const chunks = text.match(/.{1,600}/g) || [];
+        for (const chunk of chunks) {
+            const embeddingRes = await ollama.embeddings({
+                model: 'mxbai-embed-large',
+                prompt: chunk,
+            });
+            await saveChunk(material.id, chunk, embeddingRes.embedding);
+        }
+
+        res.status(200).json({ 
+            message: "File stored and knowledge base updated!", 
+            url: fileUrl,
+            id: material.id 
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // GET: Student searches materials [cite: 20, 58]
