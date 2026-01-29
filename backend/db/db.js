@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import path from 'path';
+import ollama from 'ollama';
 
 // Ensures .env is loaded correctly from the subfolder structure
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -34,14 +35,28 @@ export const uploadMaterial = async (materialData) => {
  * Part 2: Intelligent Search
  * Searches through titles, topics, and the content itself
  */
-export const searchMaterials = async (query) => {
-    const { data, error } = await supabase
-        .from('materials')
-        .select('*')
-        .or(`title.ilike.%${query}%,topic.ilike.%${query}%,content_text.ilike.%${query}%`);
+// Enhanced Search for Part 2
+export const searchMaterial = async (filters) => {
+    let query = supabase.from('materials').select('*');
+
+    // Map AI output to Database Columns
+    if (filters.type) {
+        query = query.eq('type', filters.type);
+    }
+    if (filters.week) {
+        query = query.eq('week_number', filters.week);
+    }
+    if (filters.topic) {
+        query = query.ilike('topic', `%${filters.topic}%`);
+    }
+    if (filters.search_term) {
+        // Search in title OR content
+        query = query.or(`title.ilike.%${filters.search_term}%,content_text.ilike.%${filters.search_term}%`);
+    }
+
+    const { data, error } = await query;
     return { data, error };
 };
-
 /**
  * Part 5: Fetch Context for AI
  * Gets content based on a course to "ground" Gemini's answers
@@ -61,3 +76,5 @@ export const getCourseContent = async (courseCode) => {
         .select('content_text, type, topic')
         .eq('course_id', course.id);
 };
+import ollama from 'ollama';
+
