@@ -2,9 +2,14 @@ import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import { Ollama } from 'ollama';
-import {supabase, uploadMaterial, searchMaterials, getAllMaterials } from './db/db.js'
+import {supabase, uploadMaterial, searchMaterials, getCourseContent } from './db/db.js'
 const app = express();
 app.use(express.json());
+app.use(cors({
+    origin: '*', 
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 const PORT = process.env.PORT|| 8000;
 // Initialize Ollama
@@ -52,7 +57,7 @@ app.post("/ai-check", async (req, res) => {
     console.error("AI Error:", error.message);
     res.status(500).json({ 
       error: "AI Connection Failed", 
-      details: error.message 
+      details: error.message
     });
   }
 });
@@ -71,7 +76,7 @@ app.get('/api/search', async (req, res) => {
     res.status(200).json(data);
 });
 app.get('/api/materials', async (req, res) => {
-    const { data, error } = await getAllMaterials();
+    const { data, error } = await getCourseContent();
     if (error) return res.status(500).json({ error: error.message });
     res.json(data);
 });
