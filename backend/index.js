@@ -1,33 +1,60 @@
-require('dotenv').config('.env');
+require('dotenv').config();
 const express = require('express');
-const { Pool } = require('pg');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const {OpenAI} = require('openai')
-const {Ollama} = require('ollama')
+const { Ollama } = require('ollama');
+
 const app = express();
 app.use(express.json());
 
-const PORT = process.env.PORT||8000;
+const PORT = process.env.PORT|| 8000;
 
-const ollamaCloud = new Ollama({
+// Initialize Ollama
+// If using local: http://127.0.0.1:11434
+// If using cloud: https://api.ollama.com (verify the exact provider URL)
+const ollama = new Ollama({
   host: 'https://ollama.com',
   headers: { Authorization: 'Bearer ' + process.env.OLLAMA_API_KEY },
 })
+app.get('/check', async (req, res) => {
+  try {
+    res.status(200).json({ status: 'ok'});
+  } catch (err) {
+    res.status(500).json({ status: 'error' });
+  }
+});
 
 app.post("/ai-check", async (req, res) => {
-  const { text, llm } = req.body;
+  const { text ,llm} = req.body;
+  if (!text) {
+    return res.status(400).json({ error: "No text provided" });
+  }
+
   try {
-    let extracted;
-    const systemPrompt ="natural conversation";
-    
-      const response = await ollamaCloud.chat({
-        model:"gpt-oss:20b-cloud",
-        messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: text }],
-      });
-      extracted = JSON.parse(response.message.content);
+    console.log("Sending request to AI...");
+    const response = await ollama.chat({
+      model: 'kimi-k2.5:cloud', // Use a model you have pulled/available
+      messages: [
+            { 
+                role: 'user',
+                content: text 
+            }
+        ],
+      stream: false,
+    });
+
+    res.status(200).json({
+      success: true,
+      reply: response.message.content
+    });
 
   } catch (error) {
-    console.error("Processing error:", error);
-    res.status(500).json({ error: "Failed to process request", details: error.message });
+    console.error("AI Error:", error.message);
+    res.status(500).json({ 
+      error: "AI Connection Failed", 
+      details: error.message 
+    });
   }
+});
+
+app.listen(PORT, () => {
+  console.log(`✅ AI Test Server running on http://localhost:${PORT}`);
 });
